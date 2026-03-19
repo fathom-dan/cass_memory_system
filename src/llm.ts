@@ -40,6 +40,7 @@ export interface LLMConfig {
   provider: LLMProvider;
   model: string;
   apiKey?: string;
+  baseUrl?: string;
   ollamaBaseUrl?: string;
 }
 
@@ -144,7 +145,7 @@ export function resolveOllamaBaseUrl(ollamaBaseUrl?: string): string {
   return ollamaBaseUrl || "http://localhost:11434";
 }
 
-export function getModel(config: { provider: string; model: string; apiKey?: string; ollamaBaseUrl?: string }): LanguageModel {
+export function getModel(config: { provider: string; model: string; apiKey?: string; baseUrl?: string; ollamaBaseUrl?: string }): LanguageModel {
   const provider = config.provider as LLMProvider;
 
   if (provider === "ollama") {
@@ -157,10 +158,13 @@ export function getModel(config: { provider: string; model: string; apiKey?: str
 
   const apiKey = config.apiKey || getApiKey(provider);
 
+  // Support custom base URL for OpenAI-compatible endpoints (OpenRouter, Azure, etc.)
+  const baseURL = config.baseUrl;
+
   switch (provider) {
-    case "openai": return createOpenAI({ apiKey })(config.model);
-    case "anthropic": return createAnthropic({ apiKey })(config.model);
-    case "google": return createGoogleGenerativeAI({ apiKey })(config.model);
+    case "openai": return createOpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) })(config.model);
+    case "anthropic": return createAnthropic({ apiKey, ...(baseURL ? { baseURL } : {}) })(config.model);
+    case "google": return createGoogleGenerativeAI({ apiKey, ...(baseURL ? { baseURL } : {}) })(config.model);
     default: throw new Error(`Unsupported provider: ${config.provider}`);
   }
 }
@@ -477,6 +481,7 @@ export async function generateObjectSafe<T>(
       provider: config.provider as LLMProvider,
       model: config.model,
       apiKey: config.apiKey,
+      baseUrl: config.baseUrl,
       ollamaBaseUrl: config.ollamaBaseUrl
     };
     model = getModel(llmConfig);
@@ -799,7 +804,7 @@ export async function llmWithFallback<T>(
     const isLastProvider = i === providerOrder.length - 1;
 
     try {
-      const llmModel = getModel({ provider, model, apiKey, ollamaBaseUrl: config.ollamaBaseUrl });
+      const llmModel = getModel({ provider, model, apiKey, baseUrl: config.baseUrl, ollamaBaseUrl: config.ollamaBaseUrl });
       const costConfig: Config = { ...config, provider, model, apiKey };
 
       const result = await monitoredGenerateObject<T>({

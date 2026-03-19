@@ -212,6 +212,19 @@ export async function loadConfig(cliOverrides: Partial<Config> = {}): Promise<Co
     envOverrides.ollamaBaseUrl = process.env.OLLAMA_BASE_URL;
   }
 
+  // Base URL env var fallback: provider-specific env vars override config.
+  // Checked in order: OPENAI_BASE_URL, ANTHROPIC_BASE_URL, GOOGLE_BASE_URL.
+  // Only applied when no config-level baseUrl is already set from any source.
+  if (!(globalConfig as any).baseUrl && !(migratedOverrides as any).baseUrl && !(repoConfig as any).baseUrl) {
+    const baseUrlFromEnv =
+      process.env.OPENAI_BASE_URL ||
+      process.env.ANTHROPIC_BASE_URL ||
+      process.env.GOOGLE_BASE_URL;
+    if (baseUrlFromEnv) {
+      envOverrides.baseUrl = baseUrlFromEnv;
+    }
+  }
+
   const globalExtra = (globalConfig as any)?.sanitization?.extraPatterns;
   const cliExtra = (cliOverrides as any)?.sanitization?.extraPatterns;
   const canOverrideExtraPatterns =

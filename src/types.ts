@@ -407,6 +407,7 @@ export const ConfigSchema = z.object({
   verbose: z.boolean().default(false),
   jsonOutput: z.boolean().default(false),
   apiKey: z.string().optional(),
+  baseUrl: z.string().optional(),
   ollamaBaseUrl: z.string().default("http://localhost:11434"),
   sanitization: SanitizationConfigSchema.default({}),
   budget: BudgetConfigSchema.default({})
